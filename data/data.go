@@ -22,7 +22,9 @@ var MyGPUInfo GPUInfo = GPUInfo{}
 var HttpAddress string = "localhost:8080"
 
 // 프로메테우스 서버 address
-var PrometheusAddress string = "100.0.0.2:8002"
+var PrometheusAddress string = "http://tritonserver:8002/metrics"
+
+//"ssl.ws.ahri.world:8002"
 
 // Manager address
 var ManagerAddress *string

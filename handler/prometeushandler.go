@@ -1,17 +1,13 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
-	"time"
 
 	"health-checker/data"
-
-	"github.com/prometheus/client_golang/api"
-	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 )
 
 func PrometheusHandler(w http.ResponseWriter, r *http.Request) {
@@ -21,7 +17,7 @@ func PrometheusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//TODO::usageStats 갱신 후 Health Check Manager에게 전달
-	data.MyGPUInfo.UsageStats = getUsageStats()
+	data.MyGPUInfo.UsageStats = GetUsageStats()
 
 	postGPUInfoToManager()
 
@@ -31,30 +27,22 @@ func PrometheusHandler(w http.ResponseWriter, r *http.Request) {
 	}{"success"})
 }
 
-func getUsageStats() data.UsageStats {
+func GetUsageStats() data.UsageStats {
 	usageStats := data.UsageStats{}
 
-	client, err := api.NewClient(api.Config{
-		Address: data.PrometheusAddress,
-	})
+	resp, err := http.Get(data.PrometheusAddress)
 	if err != nil {
-		log.Fatalf("Error creating Prometheus client: %v\n", err)
+		log.Fatal(err)
 	}
-
-	v1api := v1.NewAPI(client)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	query := `nv_gpu_utilization`
-	result, warnings, err := v1api.Query(ctx, query, time.Now())
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalf("Error querying Prometheus: %v\n", err)
-	}
-	if len(warnings) > 0 {
-		log.Printf("Warnings: %v\n", warnings)
+		log.Fatal(err)
 	}
 
-	fmt.Printf("Result:\n%v\n", result)
+	usageStats.Tmp = string(body)
+
+	defer fmt.Printf("Result:\n%v\n", usageStats)
 
 	return usageStats
 }
